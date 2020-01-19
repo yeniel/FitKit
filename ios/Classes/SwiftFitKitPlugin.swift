@@ -58,29 +58,13 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
     *   Once he responds no matter of the result status will be sharingDenied.
     */
     private func hasPermissions(request: PermissionsRequest, result: @escaping FlutterResult) {
-        if #available(iOS 12.0, *) {
-            healthStore!.getRequestStatusForAuthorization(toShare: [], read: Set(request.sampleTypes)) { (status, error) in
-                guard error == nil else {
-                    result(FlutterError(code: self.TAG, message: "hasPermissions", details: error))
-                    return
-                }
-
-                guard status == HKAuthorizationRequestStatus.unnecessary else {
-                    result(false)
-                    return
-                }
-
-                result(true)
-            }
-        } else {
             let authorized = request.sampleTypes.map {
                         healthStore!.authorizationStatus(for: $0)
                     }
                     .allSatisfy {
-                        $0 != HKAuthorizationStatus.notDetermined
+                        $0 == HKAuthorizationStatus.sharingAuthorized
                     }
             result(authorized)
-        }
     }
 
     private func requestPermissions(request: PermissionsRequest, result: @escaping FlutterResult) {
