@@ -36,6 +36,9 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
             } else if (call.method == "read") {
                 let request = try ReadRequest.fromCall(call: call)
                 read(request: request, result: result)
+            } else if (call.method == "write") {
+                let request = try WriteRequest.fromCall(call: call)
+                write(request: request, result: result)
             } else {
                 result(FlutterMethodNotImplemented)
             }
@@ -157,4 +160,37 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
 
         return sample.source.name;
     }
+
+    private func write(request: WriteRequest, result: @escaping FlutterResult) {
+        requestAuthorization(sampleTypes: [request.sampleType]) { success, error in
+            guard success else {
+                result(error)
+                return
+            }
+
+            self.writeSample(request: request, result: result)
+        }
+    }
+
+
+    private func writeSample(request: WriteRequest, result: @escaping FlutterResult) {
+        print("writeSample: \(request.type)")
+
+        let sampleType = HKSampleType.categoryType(forIdentifier: HKCategoryTypeIdentifier.mindfulSession)
+        let sampleObject = HKCategorySample(type: sampleType!,
+            value: HKCategoryValue.notApplicable.rawValue ,
+            start: request.dateFrom ?? Date(),
+            end: request.dateTo ?? Date())
+
+        healthStore!.save(sampleObject) { (result: Bool, error: Error?) in
+            if result {
+                result(true)
+            } else {
+                result(false)
+            }
+        }
+
+        healthStore!.execute(query)
+    }
+
 }
