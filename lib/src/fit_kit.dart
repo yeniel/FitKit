@@ -59,9 +59,14 @@ class FitKit {
       "type": _dataTypeToString(type),
       "date_from": dateFrom?.millisecondsSinceEpoch ?? 1,
       "date_to": (dateTo ?? DateTime.now()).millisecondsSinceEpoch
-    }).then(
-          (response) => response.map((item) => FitData.fromJson(item)).toList(),
-    );
+    });
+  }
+
+  /// Start watch app
+  static Future<bool> startWatchApp(double lapLenth) async {
+    return await _channel.invokeListMethod('startWatchApp', {
+      "lapLenth": lapLenth
+    });
   }
 
   static String _dataTypeToString(DataType type) {

@@ -183,14 +183,22 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
             end: request.dateTo ?? Date())
 
         healthStore!.save(sampleObject) { (result: Bool, error: Error?) in
-            if result {
-                result(true)
-            } else {
-                result(false)
-            }
+            result(result)
         }
 
         healthStore!.execute(query)
+    }
+
+    private func startWatchApp(lapLength: Double) {
+        let workoutConfiguration = HKWorkoutConfiguration()
+
+        workoutConfiguration.activityType = .mindAndBody
+        workoutConfiguration.locationType = .indoor
+        workoutConfiguration.lapLength = HKQuantity.init(unit: HKUnit.second(), doubleValue: lapLength)
+
+        healthStore!.startWatchApp(with: workoutConfiguration) { (status: Bool, error: Error?) in
+            result(status)
+        }
     }
 
 }
