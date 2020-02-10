@@ -49,7 +49,7 @@ class FitKit {
   }
 
   /// #### It's not advised to call `await FitKit.write(dataType)` without any extra parameters. This can lead to FAILED BINDER TRANSACTION on Android devices because of the data batch size being too large.
-  static Future<List<FitData>> read(
+  static Future<bool> write(
       DataType type, {
         DateTime dateFrom,
         DateTime dateTo,
@@ -58,8 +58,7 @@ class FitKit {
     return await _channel.invokeListMethod('write', {
       "type": _dataTypeToString(type),
       "date_from": dateFrom?.millisecondsSinceEpoch ?? 1,
-      "date_to": (dateTo ?? DateTime.now()).millisecondsSinceEpoch,
-      "limit": limit,
+      "date_to": (dateTo ?? DateTime.now()).millisecondsSinceEpoch
     }).then(
           (response) => response.map((item) => FitData.fromJson(item)).toList(),
     );
