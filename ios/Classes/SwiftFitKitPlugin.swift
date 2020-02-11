@@ -179,17 +179,19 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
     }
 
     private func writeSample(request: WriteRequest, result: @escaping FlutterResult) {
-        print("writeSample: \(request.type)")
+        if #available(iOS 13, *) {
+            let sampleType = HKSampleType.categoryType(forIdentifier: HKCategoryTypeIdentifier.mindfulSession)
+            let sampleObject = HKCategorySample(type: sampleType!,
+                value: HKCategoryValue.notApplicable.rawValue ,
+                start: request.dateFrom,
+                end: request.dateTo)
 
-        let sampleType = HKSampleType.categoryType(forIdentifier: HKCategoryTypeIdentifier.mindfulSession)
-        let sampleObject = HKCategorySample(type: sampleType!,
-            value: HKCategoryValue.notApplicable.rawValue ,
-            start: request.dateFrom,
-            end: request.dateTo)
-
-        healthStore!.save(sampleObject) { (value: Bool, error: Error?) in
-            result(value)
-        }
+            healthStore!.save(sampleObject) { (value: Bool, error: Error?) in
+                result(value)
+            }
+         } else {
+            result(false)
+         }
     }
 
     private func startWatchApp(lapLength: Double, result: @escaping FlutterResult) {
