@@ -27,7 +27,7 @@ class ReadRequest {
               let type = arguments["type"] as? String,
               let dateFromEpoch = arguments["date_from"] as? NSNumber,
               let dateToEpoch = arguments["date_to"] as? NSNumber else {
-            throw "invalid call arguments \(call.arguments)";
+            throw "invalid call arguments";
         }
 
         let sampleType = try HKSampleType.fromDartType(type: type)

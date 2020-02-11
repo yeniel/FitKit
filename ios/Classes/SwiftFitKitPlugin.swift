@@ -43,7 +43,7 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
                 if let arguments = call.arguments as? Dictionary<String, Any>,
                    let lapLength = arguments["lapLength"] as? Double
                 {
-                    startWatchApp(lapLength: result: result)
+                    startWatchApp(lapLength: lapLength, result: result)
                 }
             } else {
                 result(FlutterMethodNotImplemented)
@@ -193,14 +193,18 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
     }
 
     private func startWatchApp(lapLength: Double, result: @escaping FlutterResult) {
-        let workoutConfiguration = HKWorkoutConfiguration()
+        if #available(iOS 13, *) {
+            let workoutConfiguration = HKWorkoutConfiguration()
 
-        workoutConfiguration.activityType = .mindAndBody
-        workoutConfiguration.locationType = .indoor
-        workoutConfiguration.lapLength = HKQuantity.init(unit: HKUnit.second(), doubleValue: lapLength)
+            workoutConfiguration.activityType = .mindAndBody
+            workoutConfiguration.locationType = .indoor
+            workoutConfiguration.lapLength = HKQuantity.init(unit: HKUnit.second(), doubleValue: lapLength)
 
-        healthStore!.startWatchApp(with: workoutConfiguration) { (status: Bool, error: Error?) in
-            result(status)
+            healthStore!.startWatchApp(with: workoutConfiguration) { (status: Bool, error: Error?) in
+                result(status)
+            }
+        } else {
+            result(false)
         }
     }
 
