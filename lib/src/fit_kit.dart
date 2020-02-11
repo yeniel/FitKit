@@ -52,10 +52,9 @@ class FitKit {
   static Future<bool> write(
       DataType type, {
         DateTime dateFrom,
-        DateTime dateTo,
-        int limit,
+        DateTime dateTo
       }) async {
-    return await _channel.invokeListMethod('write', {
+    return await _channel.invokeMethod('write', {
       "type": _dataTypeToString(type),
       "date_from": dateFrom?.millisecondsSinceEpoch ?? 1,
       "date_to": (dateTo ?? DateTime.now()).millisecondsSinceEpoch
@@ -63,9 +62,9 @@ class FitKit {
   }
 
   /// Start watch app
-  static Future<bool> startWatchApp(double lapLenth) async {
-    return await _channel.invokeListMethod('startWatchApp', {
-      "lapLenth": lapLenth
+  static Future<bool> startWatchApp(double lapLength) async {
+    return await _channel.invokeMethod('startWatchApp', {
+      "lapLength": lapLength
     });
   }
 
