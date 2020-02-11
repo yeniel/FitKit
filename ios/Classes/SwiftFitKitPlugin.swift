@@ -24,6 +24,8 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
             healthStore = HKHealthStore();
         }
 
+        print("FitKit: handle call")
+
         do {
             if (call.method == "hasPermissions") {
                 let request = try PermissionsRequest.fromCall(call: call)
@@ -168,14 +170,9 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
     }
 
     private func write(request: WriteRequest, result: @escaping FlutterResult) {
-        requestAuthorization(sampleTypes: [request.sampleType]) { success, error in
-            guard success else {
-                result(error)
-                return
-            }
+        print("FitKit: write")
 
-            self.writeSample(request: request, result: result)
-        }
+        writeSample(request: request, result: result)
     }
 
     private func writeSample(request: WriteRequest, result: @escaping FlutterResult) {
@@ -186,7 +183,10 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
                 start: request.dateFrom,
                 end: request.dateTo)
 
+            print("FitKit: save")
+
             healthStore!.save(sampleObject) { (value: Bool, error: Error?) in
+                print("FitKit: save result \(value)")
                 result(value)
             }
          } else {
