@@ -39,6 +39,12 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
             } else if (call.method == "write") {
                 let request = try WriteRequest.fromCall(call: call)
                 write(request: request, result: result)
+            } else if (call.method == "startWatchApp") {
+                if let arguments = call.arguments as? Dictionary<String, Any>,
+                   let lapLength = arguments["lapLength"] as? Double
+                {
+                    startWatchApp(lapLength: result: result)
+                }
             } else {
                 result(FlutterMethodNotImplemented)
             }
@@ -172,24 +178,21 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
         }
     }
 
-
     private func writeSample(request: WriteRequest, result: @escaping FlutterResult) {
         print("writeSample: \(request.type)")
 
         let sampleType = HKSampleType.categoryType(forIdentifier: HKCategoryTypeIdentifier.mindfulSession)
         let sampleObject = HKCategorySample(type: sampleType!,
             value: HKCategoryValue.notApplicable.rawValue ,
-            start: request.dateFrom ?? Date(),
-            end: request.dateTo ?? Date())
+            start: request.dateFrom,
+            end: request.dateTo)
 
-        healthStore!.save(sampleObject) { (result: Bool, error: Error?) in
-            result(result)
+        healthStore!.save(sampleObject) { (value: Bool, error: Error?) in
+            result(value)
         }
-
-        healthStore!.execute(query)
     }
 
-    private func startWatchApp(lapLength: Double) {
+    private func startWatchApp(lapLength: Double, result: @escaping FlutterResult) {
         let workoutConfiguration = HKWorkoutConfiguration()
 
         workoutConfiguration.activityType = .mindAndBody
