@@ -34,6 +34,8 @@ extension HKSampleType {
                 }
             case "sleep":
                 return HKSampleType.categoryType(forIdentifier: .sleepAnalysis)
+            case "mindfulness":
+                return HKSampleType.categoryType(forIdentifier: .mindfulSession)
             default:
                 return nil
             }
@@ -64,6 +66,8 @@ extension HKUnit {
                 return HKUnit.liter()
             case "sleep":
                 return HKUnit.minute() // this is ignored
+            case "mindfulness":
+                return HKUnit.minute()
             default:
                 return nil
             }

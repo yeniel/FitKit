@@ -108,7 +108,7 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
     }
 
     private func requestAuthorization(sampleTypes: Array<HKSampleType>, completion: @escaping (Bool, FlutterError?) -> Void) {
-        healthStore!.requestAuthorization(toShare: nil, read: Set(sampleTypes)) { (success, error) in
+        healthStore!.requestAuthorization(toShare: Set(sampleTypes), read: Set(sampleTypes)) { (success, error) in
             guard success else {
                 completion(false, FlutterError(code: self.TAG, message: "Error \(error?.localizedDescription ?? "empty")", details: nil))
                 return
@@ -187,6 +187,7 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
 
             healthStore!.save(sampleObject) { (value: Bool, error: Error?) in
                 print("FitKit: save result \(value)")
+                print(
                 result(value)
             }
          } else {

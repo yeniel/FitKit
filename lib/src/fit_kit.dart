@@ -54,6 +54,7 @@ class FitKit {
         DateTime dateFrom,
         DateTime dateTo
       }) async {
+    print("FitKit: write");
     return await _channel.invokeMethod('write', {
       "type": _dataTypeToString(type),
       "date_from": dateFrom?.millisecondsSinceEpoch ?? 1,
@@ -86,6 +87,8 @@ class FitKit {
         return "water";
       case DataType.SLEEP:
         return "sleep";
+      case DataType.MINDFULNESS:
+        return "mindfulness";
     }
     throw Exception('dataType $type not supported');
   }
@@ -99,5 +102,6 @@ enum DataType {
   DISTANCE,
   ENERGY,
   WATER,
-  SLEEP
+  SLEEP,
+  MINDFULNESS
 }

@@ -16,6 +16,7 @@ fun String.fromDartType(): Type {
         "energy" -> Type.Sample(DataType.TYPE_CALORIES_EXPENDED)
         "water" -> Type.Sample(DataType.TYPE_HYDRATION)
         "sleep" -> Type.Activity(FitnessActivities.SLEEP)
+        "mindfulness" -> Type.Sample(DataType.MINDFULNESS)
         else -> throw Exception("type $this is not supported")
     }
 }
