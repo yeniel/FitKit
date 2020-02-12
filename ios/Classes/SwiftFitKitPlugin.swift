@@ -187,7 +187,7 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
 
             healthStore!.save(sampleObject) { (value: Bool, error: Error?) in
                 print("FitKit: save result \(value)")
-                print(error)
+                print(error.debugDescription)
                 result(value)
             }
          } else {
