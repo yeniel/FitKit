@@ -33,6 +33,7 @@ fun Session.getValue(): Int {
         FitnessActivities.SLEEP_DEEP -> 110
         FitnessActivities.SLEEP_REM -> 111
         FitnessActivities.SLEEP_AWAKE -> 112
+        FitnessActivities.MEDITATION -> 113
         else -> throw Exception("session ${this.activity} is not supported")
     }
 }

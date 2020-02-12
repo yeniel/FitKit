@@ -10,6 +10,7 @@ import com.google.android.gms.fitness.data.DataPoint
 import com.google.android.gms.fitness.data.DataSet
 import com.google.android.gms.fitness.data.Field
 import com.google.android.gms.fitness.data.Session
+import com.google.android.gms.fitness.request.SessionInsertRequest
 import com.google.android.gms.fitness.request.DataReadRequest
 import com.google.android.gms.fitness.request.SessionReadRequest
 import com.google.android.gms.fitness.result.DataReadResponse
@@ -66,6 +67,17 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
                 "read" -> {
                     val request = ReadRequest.fromCall(call)
                     read(request, result)
+                }
+                "write" -> {
+                    val request = WriteRequest.fromCall(call)
+                    write(request, result)
+                }
+                "startWatchApp" -> {
+                    val value: Any? = call.argument(key)
+                    val lapLength = when (value) {
+                        is Int -> value
+                        else -> null
+                    startWatchApp(lapLength: lapLength)
                 }
                 else -> result.notImplemented()
             }
@@ -140,6 +152,18 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
                 is ReadRequest.Sample -> readSample(request, result)
                 is ReadRequest.Activity -> readSession(request, result)
             }
+        }, {
+            result.error(TAG, "User denied permission access", null)
+        })
+    }
+
+    private fun write(request: WriteRequest<*>, result: Result) {
+        val options = FitnessOptions.builder()
+                .addDataType(request.type.dataType)
+                .build()
+
+        requestOAuthPermissions(options, {
+            writeSession(request, result)
         }, {
             result.error(TAG, "User denied permission access", null)
         })
@@ -238,6 +262,34 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
                 .addOnSuccessListener { response -> onSuccess(request, response, result) }
                 .addOnFailureListener { e -> result.error(TAG, e.message, null) }
                 .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }
+    }
+
+    private fun writeSession(request: WriteRequest<Type.Activity>, result: Result) {
+        Log.d(TAG, "writeSession: ${request.type.activity}")
+
+        val session = Session.Builder()
+                .setName("The Mindfulness App")
+                .setDescription("")
+                .setIdentifier(request.dateFrom.time)
+                .setActivity(FitnessActivities.MEDITATION)
+                .setStartTime(request.dateFrom.time, TimeUnit.MILLISECONDS)
+                .setEndTime(request.dateTo.time, TimeUnit.MILLISECONDS)
+                .build()
+
+        // Build a session insert request
+        val insertRequest = SessionInsertRequest.Builder()
+                .setSession(session)
+                //.addDataSet(speedDataSet)
+                //.addDataSet(activitySegments)
+                .build()
+
+        Log.i(TAG, "Inserting the session in the History API")
+        Fitness.getSessionsClient(registrar.context(), GoogleSignIn.getLastSignedInAccount(registrar.context())!!)
+                .insertSession(mClient, insertRequest)
+                .addOnSuccessListener { response -> onSuccess(request, response, result) }
+                .addOnFailureListener { e -> result.error(TAG, e.message, null) }
+                .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }
+
     }
 
     private fun onSuccess(request: ReadRequest<Type.Activity>, response: SessionReadResponse, result: Result) {
