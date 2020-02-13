@@ -7,13 +7,15 @@ abstract class WriteRequest<T : Type> private constructor(
         val type: T,
         val dateFrom: Date,
         val dateTo: Date,
+        val name: String,
+        val description: String,
 ) {
 
-    class Sample(type: Type.Sample, dateFrom: Date, dateTo: Date)
-        : WriteRequest<Type.Sample>(type, dateFrom, dateTo)
+    class Sample(type: Type.Sample, dateFrom: Date, dateTo: Date, name: String, description: String)
+        : WriteRequest<Type.Sample>(type, dateFrom, dateTo, name, description)
 
-    class Activity(type: Type.Activity, dateFrom: Date, dateTo: Date)
-        : WriteRequest<Type.Activity>(type, dateFrom, dateTo)
+    class Activity(type: Type.Activity, dateFrom: Date, dateTo: Date, name: String, description: String)
+        : WriteRequest<Type.Activity>(type, dateFrom, dateTo, name, description)
 
     companion object {
         @Throws
@@ -24,10 +26,12 @@ abstract class WriteRequest<T : Type> private constructor(
                     ?: throw Exception("date_from is not defined")
             val dateTo = safeLong(call, "date_to")?.let { Date(it) }
                     ?: throw Exception("date_to is not defined")
+            val name = call.argument("name") ?? ""
+            val description = call.argument("description") ?? ""
 
             return when (type) {
-                is Type.Sample -> Sample(type, dateFrom, dateTo)
-                is Type.Activity -> Activity(type, dateFrom, dateTo)
+                is Type.Sample -> Sample(type, dateFrom, dateTo, name, description)
+                is Type.Activity -> Activity(type, dateFrom, dateTo, name, description)
             }
         }
 

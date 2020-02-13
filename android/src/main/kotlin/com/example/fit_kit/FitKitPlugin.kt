@@ -268,8 +268,8 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
         Log.d(TAG, "writeSession: ${request.type.activity}")
 
         val session = Session.Builder()
-                .setName("The Mindfulness App")
-                .setDescription("")
+                .setName(request.name)
+                .setDescription(request.description)
                 .setIdentifier(request.dateFrom.time)
                 .setActivity(FitnessActivities.MEDITATION)
                 .setStartTime(request.dateFrom.time, TimeUnit.MILLISECONDS)
@@ -285,7 +285,7 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
 
         Log.i(TAG, "Inserting the session in the History API")
         Fitness.getSessionsClient(registrar.context(), GoogleSignIn.getLastSignedInAccount(registrar.context())!!)
-                .insertSession(mClient, insertRequest)
+                .insertSession(insertRequest)
                 .addOnSuccessListener { response -> onSuccess(request, response, result) }
                 .addOnFailureListener { e -> result.error(TAG, e.message, null) }
                 .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }

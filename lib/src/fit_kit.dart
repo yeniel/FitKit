@@ -52,13 +52,17 @@ class FitKit {
   static Future<bool> write(
       DataType type, {
         DateTime dateFrom,
-        DateTime dateTo
+        DateTime dateTo,
+        String name,
+        String description,
       }) async {
     print("FitKit: write");
     return await _channel.invokeMethod('write', {
       "type": _dataTypeToString(type),
       "date_from": dateFrom?.millisecondsSinceEpoch ?? 1,
-      "date_to": (dateTo ?? DateTime.now()).millisecondsSinceEpoch
+      "date_to": (dateTo ?? DateTime.now()).millisecondsSinceEpoch,
+      "name": name,
+      "description": description
     });
   }
 
