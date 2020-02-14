@@ -8,7 +8,7 @@ abstract class WriteRequest<T : Type> private constructor(
         val dateFrom: Date,
         val dateTo: Date,
         val name: String,
-        val description: String,
+        val description: String
 ) {
 
     class Sample(type: Type.Sample, dateFrom: Date, dateTo: Date, name: String, description: String)
@@ -19,19 +19,19 @@ abstract class WriteRequest<T : Type> private constructor(
 
     companion object {
         @Throws
-        fun fromCall(call: MethodCall): WriteRequest<*> {
+        fun fromCall(call: MethodCall): WriteRequest<Type.Activity> {
             val type = call.argument<String>("type")?.fromDartType()
                     ?: throw Exception("type is not defined")
             val dateFrom = safeLong(call, "date_from")?.let { Date(it) }
                     ?: throw Exception("date_from is not defined")
             val dateTo = safeLong(call, "date_to")?.let { Date(it) }
                     ?: throw Exception("date_to is not defined")
-            val name = call.argument("name") ?? ""
-            val description = call.argument("description") ?? ""
+            val name = call.argument<String>("name")
+            val description = call.argument<String>("description")
 
             return when (type) {
-                is Type.Sample -> Sample(type, dateFrom, dateTo, name, description)
-                is Type.Activity -> Activity(type, dateFrom, dateTo, name, description)
+                is Type.Sample -> throw Exception("type is not defined")
+                is Type.Activity -> Activity(type, dateFrom, dateTo, name ?: "", description ?: "")
             }
         }
 

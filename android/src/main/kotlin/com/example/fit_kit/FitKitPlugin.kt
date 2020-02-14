@@ -5,6 +5,7 @@ import android.util.Log
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.fitness.Fitness
+import com.google.android.gms.fitness.FitnessActivities
 import com.google.android.gms.fitness.FitnessOptions
 import com.google.android.gms.fitness.data.DataPoint
 import com.google.android.gms.fitness.data.DataSet
@@ -71,13 +72,6 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
                 "write" -> {
                     val request = WriteRequest.fromCall(call)
                     write(request, result)
-                }
-                "startWatchApp" -> {
-                    val value: Any? = call.argument(key)
-                    val lapLength = when (value) {
-                        is Int -> value
-                        else -> null
-                    startWatchApp(lapLength: lapLength)
                 }
                 else -> result.notImplemented()
             }
@@ -157,7 +151,7 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
         })
     }
 
-    private fun write(request: WriteRequest<*>, result: Result) {
+    private fun write(request: WriteRequest<Type.Activity>, result: Result) {
         val options = FitnessOptions.builder()
                 .addDataType(request.type.dataType)
                 .build()
@@ -270,7 +264,7 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
         val session = Session.Builder()
                 .setName(request.name)
                 .setDescription(request.description)
-                .setIdentifier(request.dateFrom.time)
+                .setIdentifier(request.dateFrom.time.toString())
                 .setActivity(FitnessActivities.MEDITATION)
                 .setStartTime(request.dateFrom.time, TimeUnit.MILLISECONDS)
                 .setEndTime(request.dateTo.time, TimeUnit.MILLISECONDS)
@@ -286,7 +280,7 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
         Log.i(TAG, "Inserting the session in the History API")
         Fitness.getSessionsClient(registrar.context(), GoogleSignIn.getLastSignedInAccount(registrar.context())!!)
                 .insertSession(insertRequest)
-                .addOnSuccessListener { response -> onSuccess(request, response, result) }
+                .addOnSuccessListener { result.success(true) }
                 .addOnFailureListener { e -> result.error(TAG, e.message, null) }
                 .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }
 
