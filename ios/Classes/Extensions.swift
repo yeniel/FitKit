@@ -35,7 +35,7 @@ extension HKSampleType {
             case "sleep":
                 return HKSampleType.categoryType(forIdentifier: .sleepAnalysis)
             case "mindfulness":
-                if #available(iOS 13, *) {
+                if #available(iOS 10, *) {
                     return HKSampleType.categoryType(forIdentifier: .mindfulSession)
                 } else {
                     return nil
