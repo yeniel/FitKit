@@ -1,3 +1,14 @@
+## 1.1.2
+
+* Fixed Android ConcurrentModificationException.
+* Fixed iOS error deserialization.
+* Unsupported types are now thrown as UnsupportedException.
+
+## 1.1.1
+
+* Added STAND_TIME, EXERCISE_TIME data types for iOS.
+* Fixed Android requestCode too big.
+
 ## 1.1.0
 
 * Added sleep data type.

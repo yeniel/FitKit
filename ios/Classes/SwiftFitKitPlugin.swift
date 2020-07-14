@@ -5,6 +5,7 @@ import HealthKit
 public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
 
     private let TAG = "FitKit";
+    private let TAG_UNSUPPORTED = "unsupported";
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "fit_kit", binaryMessenger: registrar.messenger())
@@ -50,8 +51,10 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
             } else {
                 result(FlutterMethodNotImplemented)
             }
+        } catch let error as UnsupportedError {
+            result(FlutterError(code: TAG_UNSUPPORTED, message: error.message, details: nil))
         } catch {
-            result(FlutterError(code: TAG, message: "Error \(error)", details: nil))
+            result(FlutterError(code: TAG, message: "\(error)", details: nil))
         }
     }
 
@@ -110,7 +113,7 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
     private func requestAuthorization(sampleTypes: Array<HKSampleType>, completion: @escaping (Bool, FlutterError?) -> Void) {
         healthStore!.requestAuthorization(toShare: Set(sampleTypes), read: Set(sampleTypes)) { (success, error) in
             guard success else {
-                completion(false, FlutterError(code: self.TAG, message: "Error \(error?.localizedDescription ?? "empty")", details: nil))
+                completion(false, FlutterError(code: self.TAG, message: "requestAuthorization", details: error.debugDescription))
                 return
             }
 
@@ -128,7 +131,7 @@ public class SwiftFitKitPlugin: NSObject, FlutterPlugin {
             _, samplesOrNil, error in
 
             guard var samples = samplesOrNil else {
-                result(FlutterError(code: self.TAG, message: "Results are null", details: error))
+                result(FlutterError(code: self.TAG, message: "Results are null", details: error.debugDescription))
                 return
             }
 

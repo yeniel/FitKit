@@ -23,11 +23,15 @@ If you're using more than one DataType it's advised to call requestPermissions w
 import 'package:fit_kit/fit_kit.dart';
 
 void read() async {
-  final results = await FitKit.read(
-    DataType.HEART_RATE,
-    dateFrom: DateTime.now().subtract(Duration(days: 5)),
-    dateTo: DateTime.now(),
-  );
+  try {
+    final results = await FitKit.read(
+      DataType.HEART_RATE,
+      dateFrom: DateTime.now().subtract(Duration(days: 5)),
+      dateTo: DateTime.now(),
+    );
+  } on UnsupportedException catch (e) {
+    // thrown in case e.dataType is unsupported
+  }
 }
 
 void readLast() async {
@@ -60,6 +64,8 @@ These are currently available data types and their corresponding GoogleFit/Healt
 | **DISTANCE** | [TYPE_DISTANCE_DELTA](https://developers.google.com/android/reference/com/google/android/gms/fitness/data/DataType.html#TYPE_DISTANCE_DELTA) | [distanceWalkingRunning](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/1615230-distancewalkingrunning) | _meter_ |
 | **ENERGY** | [TYPE_CALORIES_EXPENDED](https://developers.google.com/android/reference/com/google/android/gms/fitness/data/DataType.html#TYPE_CALORIES_EXPENDED) | [activeEnergyBurned](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/1615771-activeenergyburned) | _kilocalorie_ |
 | **WATER** | [TYPE_HYDRATION](https://developers.google.com/android/reference/com/google/android/gms/fitness/data/DataType.html#TYPE_HYDRATION) | [dietaryWater](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/1615313-dietarywater) <sup>>= iOS 9</sup> | liter |
+| **STAND_TIME** | Not supported | [appleStandTime](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/3174858-applestandtime) <sup>>= iOS 13</sup> | minute |
+| **EXERCISE_TIME** | Not supported | [appleExerciseTime](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/1615696-appleexercisetime) <sup>>= iOS 9.3</sup> | minute |
 | **SLEEP** | [FitnessActivities.SLEEP](https://developers.google.com/android/reference/com/google/android/gms/fitness/FitnessActivities.html#SLEEP) | [sleepAnalysis](https://developer.apple.com/documentation/healthkit/hkcategorytypeidentifier/1615425-sleepanalysis) | iOS:<br />0 - [inBed](https://developer.apple.com/documentation/healthkit/hkcategoryvaluesleepanalysis/inbed)<br />1 - [asleep](https://developer.apple.com/documentation/healthkit/hkcategoryvaluesleepanalysis/asleep)<br />2 - [awake](https://developer.apple.com/documentation/healthkit/hkcategoryvaluesleepanalysis/awake)<br />Android:<br />72 - [SLEEP](https://developers.google.com/android/reference/com/google/android/gms/fitness/FitnessActivities.html#public-static-final-string-sleep)<br />109 - [SLEEP_LIGHT](https://developers.google.com/android/reference/com/google/android/gms/fitness/FitnessActivities.html#public-static-final-string-sleep_light)<br />110 - [SLEEP_DEEP](https://developers.google.com/android/reference/com/google/android/gms/fitness/FitnessActivities.html#public-static-final-string-sleep_deep)<br />111 - [SLEEP_REM](https://developers.google.com/android/reference/com/google/android/gms/fitness/FitnessActivities.html#public-static-final-string-sleep_rem)<br />112 - [SLEEP_AWAKE](https://developers.google.com/android/reference/com/google/android/gms/fitness/FitnessActivities.html#public-static-final-string-sleep_awake) |
 
 ## BE AWARE
