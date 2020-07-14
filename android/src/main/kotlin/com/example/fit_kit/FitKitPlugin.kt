@@ -35,7 +35,8 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
     init {
         registrar.addActivityResultListener { requestCode, resultCode, _ ->
             if (requestCode == GOOGLE_FIT_REQUEST_CODE) {
-                oAuthPermissionListeners.forEach { it.onOAuthPermissionsResult(resultCode) }
+                oAuthPermissionListeners.toList()
+                        .forEach { it.onOAuthPermissionsResult(resultCode) }
                 return@addActivityResultListener true
             }
             return@addActivityResultListener false
@@ -44,7 +45,8 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
 
     companion object {
         private const val TAG = "FitKit"
-        private const val GOOGLE_FIT_REQUEST_CODE = 80085
+        private const val TAG_UNSUPPORTED = "unsupported"
+        private const val GOOGLE_FIT_REQUEST_CODE = 8008
 
         @JvmStatic
         fun registerWith(registrar: Registrar) {
@@ -75,6 +77,8 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
                 }
                 else -> result.notImplemented()
             }
+        } catch (e: UnsupportedException) {
+            result.error(TAG_UNSUPPORTED, e.message, null)
         } catch (e: Throwable) {
             result.error(TAG, e.message, null)
         }
@@ -171,12 +175,13 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
 
         oAuthPermissionListeners.add(object : OAuthPermissionsListener {
             override fun onOAuthPermissionsResult(resultCode: Int) {
+                oAuthPermissionListeners.remove(this)
+
                 if (resultCode == Activity.RESULT_OK) {
                     onSuccess()
                 } else {
                     onError()
                 }
-                oAuthPermissionListeners.remove(this)
             }
         })
 
