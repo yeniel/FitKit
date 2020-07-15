@@ -23,8 +23,9 @@ abstract class WriteRequest<T : Type> private constructor(
         fun fromCall(call: MethodCall): WriteRequest<Type.Activity> {
             Log.d("FitKit", "fromCall ${call.argument<String>("type")}")
 
-            val type = call.argument<String>("type")?.fromDartType()
-                    ?: throw Exception("type is not defined")
+            val type = call.argument<String>("type")?.let {
+                it.fromDartType() ?: throw UnsupportedException("type $it is not supported")
+            } ?: throw Exception("type is not defined")
             val dateFrom = safeLong(call, "date_from")?.let { Date(it) }
                     ?: throw Exception("date_from is not defined")
             val dateTo = safeLong(call, "date_to")?.let { Date(it) }

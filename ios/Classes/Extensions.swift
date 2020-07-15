@@ -77,7 +77,10 @@ extension HKSampleType {
             )
 		case "mindfulness":
             if #available(iOS 10, *) {
-                return HKSampleType.categoryType(forIdentifier: .mindfulSession)
+                return (
+                    HKSampleType.categoryType(forIdentifier: .mindfulSession),
+                    HKUnit.minute()
+                 )
             } else {
                 return nil
             }
