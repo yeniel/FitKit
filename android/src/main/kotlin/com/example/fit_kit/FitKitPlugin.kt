@@ -1,16 +1,15 @@
 package com.example.fit_kit
 
-import android.Manifest
 import android.app.Activity
 import android.content.Context
-import android.content.pm.PackageManager
 import android.util.Log
-import androidx.core.content.ContextCompat
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.fitness.Fitness
 import com.google.android.gms.fitness.FitnessActivities
 import com.google.android.gms.fitness.FitnessOptions
+import com.google.android.gms.fitness.FitnessStatusCodes
 import com.google.android.gms.fitness.data.*
 import com.google.android.gms.fitness.request.DataReadRequest
 import com.google.android.gms.fitness.request.SessionInsertRequest
@@ -34,6 +33,10 @@ class FitKitPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private var activity : Activity? = null
     private var channel: MethodChannel? = null
 
+    private var result: Result ? = null
+    private var readRequest: ReadRequest<*> ? = null
+    private var writeRequest: WriteRequest<Type.Activity> ? = null
+
     interface OAuthPermissionsListener {
         fun onOAuthPermissionsResult(resultCode: Int)
     }
@@ -44,6 +47,8 @@ class FitKitPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         private const val TAG = "FitKit"
         private const val TAG_UNSUPPORTED = "unsupported"
         private const val GOOGLE_FIT_REQUEST_CODE = 8008
+        private const val OAUTH_WRITE_REQUEST_CODE = 6006
+        private const val OAUTH_READ_REQUEST_CODE = 7007
 
         @JvmStatic
         fun registerWith(registrar: Registrar) {
@@ -81,12 +86,31 @@ class FitKitPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         this.activity = binding.activity
 
         binding.addActivityResultListener { requestCode, resultCode, _ ->
-            if (requestCode == GOOGLE_FIT_REQUEST_CODE) {
-                oAuthPermissionListeners.toList()
-                        .forEach { it.onOAuthPermissionsResult(resultCode) }
-                return@addActivityResultListener true
+            when (requestCode) {
+                GOOGLE_FIT_REQUEST_CODE -> {
+                    oAuthPermissionListeners.toList()
+                            .forEach { it.onOAuthPermissionsResult(resultCode) }
+                    return@addActivityResultListener true
+                }
+                OAUTH_WRITE_REQUEST_CODE -> {
+                    this.result?.let { res ->
+                        this.writeRequest?.let { req ->
+                            writeSession(req, res)
+                        }
+                    }
+                    return@addActivityResultListener true
+
+                }
+                OAUTH_READ_REQUEST_CODE -> {
+                    this.result?.let { res ->
+                        this.readRequest?.let { req ->
+                            read(req, res)
+                        }
+                    }
+                    return@addActivityResultListener true
+                }
+                else -> return@addActivityResultListener false
             }
-            return@addActivityResultListener false
         }
     }
 
@@ -189,9 +213,7 @@ class FitKitPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                             }
                         }
             }
-
         }
-
     }
 
     private fun read(request: ReadRequest<*>, result: Result) {
@@ -281,7 +303,17 @@ class FitKitPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 Fitness.getHistoryClient(ctx, acc)
                         .readData(readRequest)
                         .addOnSuccessListener { response -> onSuccess(response, result) }
-                        .addOnFailureListener { e -> result.error(TAG, e.message, null) }
+                        .addOnFailureListener {e ->
+                            if (e is ResolvableApiException) {
+                                if (e.statusCode == FitnessStatusCodes.NEEDS_OAUTH_PERMISSIONS) {
+                                    this.result = result
+                                    this.readRequest = request
+                                    e.startResolutionForResult(activity, OAUTH_READ_REQUEST_CODE)
+                                }
+                            } else {
+                                result.error(TAG, e.message, null)
+                            }
+                        }
                         .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }
             }
         }
@@ -331,7 +363,17 @@ class FitKitPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 Fitness.getSessionsClient(ctx, acc)
                         .readSession(readRequest)
                         .addOnSuccessListener { response -> onSuccess(request, response, result) }
-                        .addOnFailureListener { e -> result.error(TAG, e.message, null) }
+                        .addOnFailureListener { e ->
+                            if (e is ResolvableApiException) {
+                                if (e.statusCode == FitnessStatusCodes.NEEDS_OAUTH_PERMISSIONS) {
+                                    this.result = result
+                                    this.readRequest = request
+                                    e.startResolutionForResult(activity, OAUTH_READ_REQUEST_CODE)
+                                }
+                            } else {
+                                result.error(TAG, e.message, null)
+                            }
+                        }
                         .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }
             }
         }
@@ -366,7 +408,17 @@ class FitKitPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 Fitness.getSessionsClient(ctx, acc)
                         .insertSession(insertRequest)
                         .addOnSuccessListener { result.success(true) }
-                        .addOnFailureListener { e -> result.error(TAG, e.message, null) }
+                        .addOnFailureListener { e ->
+                            if (e is ResolvableApiException) {
+                                if (e.statusCode == FitnessStatusCodes.NEEDS_OAUTH_PERMISSIONS) {
+                                    this.result = result
+                                    this.writeRequest = request
+                                    e.startResolutionForResult(activity, OAUTH_WRITE_REQUEST_CODE)
+                                }
+                            } else {
+                                result.error(TAG, e.message, null)
+                            }
+                        }
                         .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }
             }
         }
