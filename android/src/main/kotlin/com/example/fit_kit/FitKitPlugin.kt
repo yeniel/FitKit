@@ -33,6 +33,7 @@ class FitKitPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private var activity : Activity? = null
     private var channel: MethodChannel? = null
 
+    private var askedForOAuthPermission = false;
     private var result: Result ? = null
     private var readRequest: ReadRequest<*> ? = null
     private var writeRequest: WriteRequest<Type.Activity> ? = null
@@ -304,10 +305,11 @@ class FitKitPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                         .readData(readRequest)
                         .addOnSuccessListener { response -> onSuccess(response, result) }
                         .addOnFailureListener {e ->
-                            if (e is ResolvableApiException) {
+                            if (e is ResolvableApiException && !askedForOAuthPermission) {
                                 if (e.statusCode == FitnessStatusCodes.NEEDS_OAUTH_PERMISSIONS) {
                                     this.result = result
                                     this.readRequest = request
+                                    this.askedForOAuthPermission = true
                                     e.startResolutionForResult(activity, OAUTH_READ_REQUEST_CODE)
                                 }
                             } else {
@@ -365,9 +367,10 @@ class FitKitPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                         .addOnSuccessListener { response -> onSuccess(request, response, result) }
                         .addOnFailureListener { e ->
                             if (e is ResolvableApiException) {
-                                if (e.statusCode == FitnessStatusCodes.NEEDS_OAUTH_PERMISSIONS) {
+                                if (e.statusCode == FitnessStatusCodes.NEEDS_OAUTH_PERMISSIONS && !askedForOAuthPermission) {
                                     this.result = result
                                     this.readRequest = request
+                                    this.askedForOAuthPermission = true
                                     e.startResolutionForResult(activity, OAUTH_READ_REQUEST_CODE)
                                 }
                             } else {
@@ -410,9 +413,10 @@ class FitKitPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                         .addOnSuccessListener { result.success(true) }
                         .addOnFailureListener { e ->
                             if (e is ResolvableApiException) {
-                                if (e.statusCode == FitnessStatusCodes.NEEDS_OAUTH_PERMISSIONS) {
+                                if (e.statusCode == FitnessStatusCodes.NEEDS_OAUTH_PERMISSIONS && !askedForOAuthPermission) {
                                     this.result = result
                                     this.writeRequest = request
+                                    this.askedForOAuthPermission = true
                                     e.startResolutionForResult(activity, OAUTH_WRITE_REQUEST_CODE)
                                 }
                             } else {
