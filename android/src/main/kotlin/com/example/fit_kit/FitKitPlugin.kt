@@ -1,21 +1,24 @@
 package com.example.fit_kit
 
 import android.app.Activity
+import android.content.Context
 import android.util.Log
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.fitness.Fitness
 import com.google.android.gms.fitness.FitnessActivities
 import com.google.android.gms.fitness.FitnessOptions
-import com.google.android.gms.fitness.data.DataPoint
-import com.google.android.gms.fitness.data.DataSet
-import com.google.android.gms.fitness.data.Field
-import com.google.android.gms.fitness.data.Session
-import com.google.android.gms.fitness.request.SessionInsertRequest
+import com.google.android.gms.fitness.FitnessStatusCodes
+import com.google.android.gms.fitness.data.*
 import com.google.android.gms.fitness.request.DataReadRequest
+import com.google.android.gms.fitness.request.SessionInsertRequest
 import com.google.android.gms.fitness.request.SessionReadRequest
 import com.google.android.gms.fitness.result.DataReadResponse
 import com.google.android.gms.fitness.result.SessionReadResponse
+import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
@@ -24,7 +27,15 @@ import io.flutter.plugin.common.PluginRegistry.Registrar
 import java.util.concurrent.TimeUnit
 
 
-class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
+class FitKitPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
+
+    private var context: Context? = null
+    private var activity : Activity? = null
+    private var channel: MethodChannel? = null
+
+    private var result: Result ? = null
+    private var readRequest: ReadRequest<*> ? = null
+    private var writeRequest: WriteRequest<Type.Activity> ? = null
 
     interface OAuthPermissionsListener {
         fun onOAuthPermissionsResult(resultCode: Int)
@@ -32,27 +43,87 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
 
     private val oAuthPermissionListeners = mutableListOf<OAuthPermissionsListener>()
 
-    init {
-        registrar.addActivityResultListener { requestCode, resultCode, _ ->
-            if (requestCode == GOOGLE_FIT_REQUEST_CODE) {
-                oAuthPermissionListeners.toList()
-                        .forEach { it.onOAuthPermissionsResult(resultCode) }
-                return@addActivityResultListener true
-            }
-            return@addActivityResultListener false
-        }
-    }
-
     companion object {
         private const val TAG = "FitKit"
         private const val TAG_UNSUPPORTED = "unsupported"
         private const val GOOGLE_FIT_REQUEST_CODE = 8008
+        private const val OAUTH_WRITE_REQUEST_CODE = 6006
+        private const val OAUTH_READ_REQUEST_CODE = 7007
 
         @JvmStatic
         fun registerWith(registrar: Registrar) {
+            val plugin = FitKitPlugin()
+            plugin.context = registrar.context()
+            plugin.activity = registrar.activity()
+
+            registrar.addActivityResultListener { requestCode, resultCode, _ ->
+                if (requestCode == GOOGLE_FIT_REQUEST_CODE) {
+                    plugin.oAuthPermissionListeners.toList()
+                            .forEach { it.onOAuthPermissionsResult(resultCode) }
+                    return@addActivityResultListener true
+                }
+                return@addActivityResultListener false
+            }
+
             val channel = MethodChannel(registrar.messenger(), "fit_kit")
-            channel.setMethodCallHandler(FitKitPlugin(registrar))
+            channel.setMethodCallHandler(plugin)
         }
+    }
+
+    override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        this.context = binding.applicationContext
+
+        this.channel = MethodChannel(binding.binaryMessenger, "fit_kit")
+        channel?.setMethodCallHandler(this)
+    }
+
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        channel?.setMethodCallHandler(null)
+        channel = null
+    }
+
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        this.activity = binding.activity
+
+        binding.addActivityResultListener { requestCode, resultCode, _ ->
+            when (requestCode) {
+                GOOGLE_FIT_REQUEST_CODE -> {
+                    oAuthPermissionListeners.toList()
+                            .forEach { it.onOAuthPermissionsResult(resultCode) }
+                    return@addActivityResultListener true
+                }
+                OAUTH_WRITE_REQUEST_CODE -> {
+                    this.result?.let { res ->
+                        this.writeRequest?.let { req ->
+                            writeSession(req, res)
+                        }
+                    }
+                    return@addActivityResultListener true
+
+                }
+                OAUTH_READ_REQUEST_CODE -> {
+                    this.result?.let { res ->
+                        this.readRequest?.let { req ->
+                            read(req, res)
+                        }
+                    }
+                    return@addActivityResultListener true
+                }
+                else -> return@addActivityResultListener false
+            }
+        }
+    }
+
+    override fun onDetachedFromActivity() {
+        this.activity = null;
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        onAttachedToActivity(binding)
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {
+        onDetachedFromActivity()
     }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
@@ -121,23 +192,28 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
             return
         }
 
-        Fitness.getConfigClient(registrar.context(), GoogleSignIn.getLastSignedInAccount(registrar.context())!!)
-                .disableFit()
-                .continueWithTask {
-                    val signInOptions = GoogleSignInOptions.Builder()
-                            .addExtension(fitnessOptions)
-                            .build()
-                    GoogleSignIn.getClient(registrar.context(), signInOptions)
-                            .revokeAccess()
-                }
-                .addOnSuccessListener { result.success(null) }
-                .addOnFailureListener { e ->
-                    if (!hasOAuthPermission(fitnessOptions)) {
-                        result.success(null)
-                    } else {
-                        result.error(TAG, e.message, null)
-                    }
-                }
+        context?.let {ctx ->
+            val account = GoogleSignIn.getLastSignedInAccount(ctx)
+            account?.let { acc ->
+                Fitness.getConfigClient(ctx, acc)
+                        .disableFit()
+                        .continueWithTask {
+                            val signInOptions = GoogleSignInOptions.Builder()
+                                    .addExtension(fitnessOptions)
+                                    .build()
+                            GoogleSignIn.getClient(ctx, signInOptions)
+                                    .revokeAccess()
+                        }
+                        .addOnSuccessListener { result.success(null) }
+                        .addOnFailureListener { e ->
+                            if (!hasOAuthPermission(fitnessOptions)) {
+                                result.success(null)
+                            } else {
+                                result.error(TAG, e.message, null)
+                            }
+                        }
+            }
+        }
     }
 
     private fun read(request: ReadRequest<*>, result: Result) {
@@ -171,29 +247,39 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
         if (hasOAuthPermission(fitnessOptions)) {
             onSuccess()
             return
-        }
+        } else {
+            oAuthPermissionListeners.add(object : OAuthPermissionsListener {
+                override fun onOAuthPermissionsResult(resultCode: Int) {
+                    oAuthPermissionListeners.remove(this)
 
-        oAuthPermissionListeners.add(object : OAuthPermissionsListener {
-            override fun onOAuthPermissionsResult(resultCode: Int) {
-                oAuthPermissionListeners.remove(this)
-
-                if (resultCode == Activity.RESULT_OK) {
-                    onSuccess()
-                } else {
-                    onError()
+                    if (resultCode == Activity.RESULT_OK) {
+                        onSuccess()
+                    } else {
+                        onError()
+                    }
                 }
-            }
-        })
+            })
 
-        GoogleSignIn.requestPermissions(
-                registrar.activity(),
-                GOOGLE_FIT_REQUEST_CODE,
-                GoogleSignIn.getLastSignedInAccount(registrar.context()),
-                fitnessOptions)
+            activity?.let {act ->
+                context?.let {ctx ->
+                    GoogleSignIn.requestPermissions(
+                            act,
+                            GOOGLE_FIT_REQUEST_CODE,
+                            GoogleSignIn.getLastSignedInAccount(ctx),
+                            fitnessOptions)
+                }
+
+            }
+
+        }
     }
 
     private fun hasOAuthPermission(fitnessOptions: FitnessOptions): Boolean {
-        return GoogleSignIn.hasPermissions(GoogleSignIn.getLastSignedInAccount(registrar.context()), fitnessOptions)
+        context?.let {ctx ->
+            return GoogleSignIn.hasPermissions(GoogleSignIn.getLastSignedInAccount(ctx), fitnessOptions)
+        }
+
+        return false
     }
 
     private fun readSample(request: ReadRequest<Type.Sample>, result: Result) {
@@ -211,11 +297,26 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
                 .enableServerQueries()
                 .build()
 
-        Fitness.getHistoryClient(registrar.context(), GoogleSignIn.getLastSignedInAccount(registrar.context())!!)
-                .readData(readRequest)
-                .addOnSuccessListener { response -> onSuccess(response, result) }
-                .addOnFailureListener { e -> result.error(TAG, e.message, null) }
-                .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }
+        context?.let { ctx ->
+            val account = GoogleSignIn.getLastSignedInAccount(ctx)
+            account?.let { acc ->
+                Fitness.getHistoryClient(ctx, acc)
+                        .readData(readRequest)
+                        .addOnSuccessListener { response -> onSuccess(response, result) }
+                        .addOnFailureListener {e ->
+                            if (e is ResolvableApiException) {
+                                if (e.statusCode == FitnessStatusCodes.NEEDS_OAUTH_PERMISSIONS) {
+                                    this.result = result
+                                    this.readRequest = request
+                                    e.startResolutionForResult(activity, OAUTH_READ_REQUEST_CODE)
+                                }
+                            } else {
+                                result.error(TAG, e.message, null)
+                            }
+                        }
+                        .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }
+            }
+        }
     }
 
     private fun onSuccess(response: DataReadResponse, result: Result) {
@@ -256,11 +357,26 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
                 .enableServerQueries()
                 .build()
 
-        Fitness.getSessionsClient(registrar.context(), GoogleSignIn.getLastSignedInAccount(registrar.context())!!)
-                .readSession(readRequest)
-                .addOnSuccessListener { response -> onSuccess(request, response, result) }
-                .addOnFailureListener { e -> result.error(TAG, e.message, null) }
-                .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }
+        context?.let { ctx ->
+            val account = GoogleSignIn.getLastSignedInAccount(ctx)
+            account?.let { acc ->
+                Fitness.getSessionsClient(ctx, acc)
+                        .readSession(readRequest)
+                        .addOnSuccessListener { response -> onSuccess(request, response, result) }
+                        .addOnFailureListener { e ->
+                            if (e is ResolvableApiException) {
+                                if (e.statusCode == FitnessStatusCodes.NEEDS_OAUTH_PERMISSIONS) {
+                                    this.result = result
+                                    this.readRequest = request
+                                    e.startResolutionForResult(activity, OAUTH_READ_REQUEST_CODE)
+                                }
+                            } else {
+                                result.error(TAG, e.message, null)
+                            }
+                        }
+                        .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }
+            }
+        }
     }
 
     private fun writeSession(request: WriteRequest<Type.Activity>, result: Result) {
@@ -282,13 +398,30 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
                 //.addDataSet(activitySegments)
                 .build()
 
-        Log.i(TAG, "Inserting the session in the History API")
-        Fitness.getSessionsClient(registrar.context(), GoogleSignIn.getLastSignedInAccount(registrar.context())!!)
-                .insertSession(insertRequest)
-                .addOnSuccessListener { result.success(true) }
-                .addOnFailureListener { e -> result.error(TAG, e.message, null) }
-                .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }
 
+        context?.let { ctx ->
+            val account = GoogleSignIn.getLastSignedInAccount(ctx)
+
+            Log.i(TAG, "Inserting the session in the History API")
+
+            account?.let { acc ->
+                Fitness.getSessionsClient(ctx, acc)
+                        .insertSession(insertRequest)
+                        .addOnSuccessListener { result.success(true) }
+                        .addOnFailureListener { e ->
+                            if (e is ResolvableApiException) {
+                                if (e.statusCode == FitnessStatusCodes.NEEDS_OAUTH_PERMISSIONS) {
+                                    this.result = result
+                                    this.writeRequest = request
+                                    e.startResolutionForResult(activity, OAUTH_WRITE_REQUEST_CODE)
+                                }
+                            } else {
+                                result.error(TAG, e.message, null)
+                            }
+                        }
+                        .addOnCanceledListener { result.error(TAG, "GoogleFit Cancelled", null) }
+            }
+        }
     }
 
     private fun onSuccess(request: ReadRequest<Type.Activity>, response: SessionReadResponse, result: Result) {
