@@ -11,8 +11,8 @@ import com.google.android.gms.fitness.data.DataPoint
 import com.google.android.gms.fitness.data.DataSet
 import com.google.android.gms.fitness.data.Field
 import com.google.android.gms.fitness.data.Session
-import com.google.android.gms.fitness.request.SessionInsertRequest
 import com.google.android.gms.fitness.request.DataReadRequest
+import com.google.android.gms.fitness.request.SessionInsertRequest
 import com.google.android.gms.fitness.request.SessionReadRequest
 import com.google.android.gms.fitness.result.DataReadResponse
 import com.google.android.gms.fitness.result.SessionReadResponse
@@ -78,14 +78,15 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
                 else -> result.notImplemented()
             }
         } catch (e: UnsupportedException) {
-            result.error(TAG_UNSUPPORTED, e.message, null)
+            result.error(TAG_UNSUPPORTED, e.message, e.printStackTrace())
         } catch (e: Throwable) {
-            result.error(TAG, e.message, null)
+            result.error(TAG, e.message, e.printStackTrace())
         }
     }
 
     private fun hasPermissions(request: PermissionsRequest, result: Result) {
         val options = FitnessOptions.builder()
+                .accessActivitySessions(1)
                 .addDataTypes(request.types.map { it.dataType })
                 .build()
 
@@ -98,6 +99,7 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
 
     private fun requestPermissions(request: PermissionsRequest, result: Result) {
         val options = FitnessOptions.builder()
+                .accessActivitySessions(1)
                 .addDataTypes(request.types.map { it.dataType })
                 .build()
 
@@ -142,6 +144,7 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
 
     private fun read(request: ReadRequest<*>, result: Result) {
         val options = FitnessOptions.builder()
+                .accessActivitySessions(1)
                 .addDataType(request.type.dataType)
                 .build()
 
@@ -157,6 +160,7 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
 
     private fun write(request: WriteRequest<Type.Activity>, result: Result) {
         val options = FitnessOptions.builder()
+                .accessActivitySessions(1)
                 .addDataType(request.type.dataType)
                 .build()
 
@@ -167,7 +171,7 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
         })
     }
 
-    private fun requestOAuthPermissions(fitnessOptions: FitnessOptions, onSuccess: () -> Unit, onError: () -> Unit) {
+    private fun requestOAuthPermissions(fitnessOptions: FitnessOptions, onSuccess: () -> Unit, onError: (result:Int) -> Unit) {
         if (hasOAuthPermission(fitnessOptions)) {
             onSuccess()
             return
@@ -180,7 +184,7 @@ class FitKitPlugin(private val registrar: Registrar) : MethodCallHandler {
                 if (resultCode == Activity.RESULT_OK) {
                     onSuccess()
                 } else {
-                    onError()
+                    onError(resultCode)
                 }
             }
         })
